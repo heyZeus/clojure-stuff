@@ -6,8 +6,6 @@ for n in `ls $CLJ_JARS/*.jar`; do
    JARS=${JARS}:$n
 done
 
-CLJRC=~/share/clojure-stuff/repl-init.clj
-
 if [ -z "$1" ]; then 
      rlwrap --remember -c -b $BREAK_CHARS -f ~/.clj_completions \
      java -cp $JARS clojure.main -i $CLJRC -e "(repl)"
