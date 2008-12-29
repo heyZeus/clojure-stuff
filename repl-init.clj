@@ -1,3 +1,6 @@
+
+(comment "All REPL initialization goes in this file")
+
 (set! *print-length* 50)
 (set! *print-level* 10)
 
@@ -6,13 +9,13 @@
   (symbol (.replaceAll (.replaceAll (.substring name 0 (- (.lastIndexOf name "clj") 1)) "_" "-") "/" ".")))
 
 (defn contrib-ns [jar]
-  "Returns a seq of symbols in the contrib libs in the clojure.contrib package"
+  "Returns a seq of symbols from the clojure.contrib package, is not recursive and doesn't include test files."
   (for [f (map #(.getName %) 
                (enumeration-seq (.entries (java.util.zip.ZipFile. jar))))
         :when (and (.endsWith f "clj") (= 3 (count (.split f "/"))) (not (.contains f "test")))]
     (name-to-symbol f)))
 
-; sets the variable to the path to the colure-contrib.jar file, otherwise nil
+; sets the variable to the colure-contrib.jar path, otherwise nil
 (def contrib-jar (if-let [url (.getResource (ClassLoader/getSystemClassLoader) "clojure-contrib.jar")]
                    (.getFile url))) 
 
