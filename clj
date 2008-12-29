@@ -1,7 +1,6 @@
 #!/bin/bash
 
 BREAK_CHARS="(){}[],^%$#@\"\";:''|\\"
-CP=${CLJ_JARS}
 for n in `ls ${CLJ_JARS}*.jar`; do
    CP=${CP}:$n
 done
