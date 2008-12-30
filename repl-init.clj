@@ -1,5 +1,5 @@
 
-(comment "All REPL initialization goes in this file")
+(comment "REPL initialization goes in this file.")
 
 (set! *print-length* 50)
 (set! *print-level* 10)
@@ -23,7 +23,7 @@
   "Calls the use function on every clj file in the clojure.contrib package. Not every clj file can
   be loaded because of function name clashes with the core."
   (if contrib-jar 
-    (println (str "Loaded " (reduce (fn [ret n] 
+    (println (str "use " (reduce (fn [ret n] 
                                       (try 
                                         (use n)
                                         (conj ret n)
@@ -32,3 +32,5 @@
 
 (use-contribs)
 
+; load in the line numbered repl
+(repl)
