@@ -1,1 +1,10 @@
-Just some random Clojure scripts. 
+Just some Clojure base scripts is use to get things going.
+
+The download-clojure.sh script is used to download the latest clojure
+and clojure-contrib src, build and copy the jars to $CLJ_JARS dir.
+
+The shell script 'clj' is used to start the repl or run a 
+clojure script from the command line.  
+
+The repl-init.clj initializes the REPL and then starts it up.  This
+script is called by the 'clj' script if no args are passed in. 

@@ -1,5 +1,5 @@
 
-(comment "REPL initialization goes in this file.")
+(comment "all REPL initialization goes here.")
 
 (set! *print-length* 50)
 (set! *print-level* 10)
@@ -15,7 +15,7 @@
         :when (and (.endsWith f "clj") (= 3 (count (.split f "/"))) (not (.contains f "test")))]
     (name-to-symbol f)))
 
-; sets the variable to the colure-contrib.jar path, otherwise nil
+;sets the variable to the colure-contrib.jar path, otherwise nil
 (def contrib-jar (if-let [url (.getResource (ClassLoader/getSystemClassLoader) "clojure-contrib.jar")]
                    (.getFile url))) 
 
@@ -30,7 +30,8 @@
                                         (catch Exception _ ret)))
                                     [] (contrib-ns contrib-jar))))))
 
+;calls use on all of the useful contrib stuff
 (use-contribs)
 
-; load in the line numbered repl
+;starts up the line numbered REPL
 (repl)
