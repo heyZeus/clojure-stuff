@@ -30,6 +30,14 @@
                                         (catch Exception _ ret)))
                                     [] (contrib-ns contrib-jar))))))
 
+
+
+(defn print-all-* []
+  "Prints all of the vars in the clojure.core that start with *"
+  (doseq [[key var] (for [[key value] (ns-publics 'clojure.core) :when (.startsWith (str key) "*")] 
+                      [key (var-get value)])]
+           (println key "=>" var)))
+
 ;calls use on all of the useful contrib stuff
 (use-contribs)
 
