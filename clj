@@ -1,9 +1,7 @@
 #!/bin/bash
 
 BREAK_CHARS="(){}[],^%$#@\"\";:''|\\"
-for n in `ls ${CLJ_JARS}*.jar`; do
-   CP=${CP}:$n
-done
+CP=${CLJ_JARS}*:classes
 
 if [ -z "$1" ]; then 
      rlwrap --remember -c -b $BREAK_CHARS -f ~/.clj_completions \
