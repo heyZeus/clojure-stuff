@@ -1,6 +1,7 @@
 #!/bin/bash
 
 BREAK_CHARS="(){}[],^%$#@\"\";:''|\\"
+# this works with java 1.6
 CP=${CLJ_JARS}*:classes
 
 if [ -z "$1" ]; then 
