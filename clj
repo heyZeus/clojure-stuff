@@ -3,10 +3,10 @@
 BREAK_CHARS="(){}[],^%$#@\"\";:''|\\"
 
 # this works with java 1.6
-CP=${CLJ_JARS}*:classes
+CP=${CLJ_JARS}/*:classes
 OPTS=${CLJ_OPTS:-}
 export CLASSPATH="${CP}"
-PARAMS="clojure.main $1 -- $2 $3 $4 $5 $6 $7 $8 $9"
+PARAMS="clojure.main $1 $2 $3 $4 $5 $6 $7 $8 $9"
 PRE=
 JAVA=java
 
