@@ -6,25 +6,27 @@
 
 (def ftp-str (str "ftp://anonymous: @ftp.gnome.org" "/Public/GNOME/teams/art.gnome.org/backgrounds/"))
 
+(def download-file (str (.getProperty (System/getProperties) "user.home") "/desktop-image.jpg"))
+
 (defn potential-files [url resolution]
     (for [name (map #(last (.split %1 " ")) 
                  (.split (streams/slurp* url) "\n")) 
         :when (.endsWith name (str "_" resolution ".jpg"))] name))
 
-(defn write-bytes-to-file [instream filename]
-  (with-open [ostream (new FileOutputStream filename)]
+(defn write-bytes-to-file [in-stream filename]
+  (with-open [out-stream (new FileOutputStream filename)]
     (let [buffer (make-array (Byte/TYPE) 4096)]
-      (loop [bytes (.read instream buffer)]
+      (loop [bytes (.read in-stream buffer)]
         (if (not (neg? bytes))
           (do 
-            (.write ostream buffer 0 bytes)
-            (recur (.read instream buffer))))))))
+            (.write out-stream buffer 0 bytes)
+            (recur (.read in-stream buffer))))))))
 
 (defn select-file [ftp-str resolution]
   (let [files (potential-files (URL. ftp-str) resolution)]
     (str ftp-str (nth files (rand-int (count files))))))
 
-(defn update [resolution download-file]
+(defn update [resolution]
    (let [tmp-download-file (str download-file ".tmp")]
      (with-open [r (.openStream (URL. (select-file ftp-str resolution)))]
        (write-bytes-to-file r tmp-download-file))
@@ -32,10 +34,14 @@
      (sout/sh "/usr/bin/gconftool" "-s" 
               "/desktop/gnome/background/picture_filename -t string \"" download-file "\"")))
 
-(defn cmd-line-args [& defaults]
-  (concat () *command-line-args* defaults))
+(update (or (first *command-line-args*) "1680x1050"))
 
-(let [[resolution file] (cmd-line-args "1680x1050"
-                                       (str (.getProperty (System/getProperties) "user.home") "/desktop-image.jpg"))]
-  (update resolution file))
+(comment " 
+  Call this script from the command line and only takes one argument, your screen resolution.
+  This assumes you are running gnome and have access to the internet.
+
+  clj update-desktop-image 1024x178
+  clj update-desktop-image ; this assumes 1680x1050 resolution")
+
+
 
