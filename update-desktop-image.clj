@@ -6,14 +6,16 @@
 
 (def ftp-str (str "ftp://anonymous: @ftp.gnome.org" "/Public/GNOME/teams/art.gnome.org/backgrounds/"))
 
-(def download-file (str (.getProperty (System/getProperties) "user.home") "/desktop-image.jpg"))
+(def image-name (str (.getProperty (System/getProperties) "user.home") "/desktop-image.jpg"))
 
 (defn potential-files [url resolution]
     (for [name (map #(last (.split %1 " ")) 
                  (.split (streams/slurp* url) "\n")) 
         :when (.endsWith name (str "_" resolution ".jpg"))] name))
 
-(defn write-bytes-to-file [in-stream filename]
+(defn write-bytes 
+  "Writes the bytes from the in-stream to the given filename."
+  [#^java.io.InputStream in-stream #^String filename]
   (with-open [out-stream (new FileOutputStream filename)]
     (let [buffer (make-array (Byte/TYPE) 4096)]
       (loop [bytes (.read in-stream buffer)]
@@ -27,12 +29,12 @@
     (str ftp-str (nth files (rand-int (count files))))))
 
 (defn update [resolution]
-   (let [tmp-download-file (str download-file ".tmp")]
+   (let [tmp-image-name (str image-name ".tmp")]
      (with-open [r (.openStream (URL. (select-file ftp-str resolution)))]
-       (write-bytes-to-file r tmp-download-file))
-     (sout/sh "mv" "-f" tmp-download-file download-file)
+       (write-bytes r tmp-image-name))
+     (sout/sh "mv" "-f" tmp-image-name image-name)
      (sout/sh "/usr/bin/gconftool" "-s" 
-              "/desktop/gnome/background/picture_filename -t string \"" download-file "\"")))
+              "/desktop/gnome/background/picture_filename -t string \"" image-name "\"")))
 
 (update (or (first *command-line-args*) "1680x1050"))
 
