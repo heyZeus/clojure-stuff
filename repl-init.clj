@@ -1,12 +1,12 @@
 
-(comment "all REPL initialization goes here.")
+; all REPL initialization goes here
 
 (set! *print-length* 50)
 (set! *print-level* 10)
 
-(defn name-to-symbol [name] 
-  "Converts the name to something that can be passed to the symbol function"
-  (symbol (.replaceAll (.replaceAll (.substring name 0 (- (.lastIndexOf name "clj") 1)) "_" "-") "/" ".")))
+(defn name-to-symbol [lib-name] 
+  "Converts the lib-name to a symbol"
+  (symbol (.replaceAll (.replaceAll (.substring lib-name 0 (- (.lastIndexOf lib-name "clj") 1)) "_" "-") "/" ".")))
 
 (defn contrib-ns [jar]
   "Returns a seq of symbols from the clojure.contrib package, is not recursive and doesn't include test files."
@@ -28,7 +28,7 @@
                                         (use n)
                                         (conj ret n)
                                         (catch Exception _ ret)))
-                                    [] (contrib-ns contrib-jar))))))
+                           [] (contrib-ns contrib-jar))))))
 
 
 
@@ -36,8 +36,9 @@
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
   ([] (print-all-* 'clojure.core))
   ([ns] 
-    (doseq [[key value] (for [[key value] (ns-publics ns) :when (.startsWith (str key) "*")] 
-                        [value (var-get value)])]
+    (doseq [[key value] (for [[key value] (ns-publics ns) 
+                               :when (.startsWith (str key) "*")] 
+                          [value (var-get value)])]
              (println key "=>" value))))
 
 ;calls use on all of the useful contrib stuff
@@ -45,3 +46,4 @@
 
 ;starts up the line numbered REPL
 (repl)
+
