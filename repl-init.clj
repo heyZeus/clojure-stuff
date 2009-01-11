@@ -32,14 +32,13 @@
 
 
 
-(defn print-all-* 
+(defn print-* 
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
-  ([] (print-all-* 'clojure.core))
+  ([] (print-* 'clojure.core))
   ([ns] 
-    (doseq [[key value] (for [[key value] (ns-publics ns) 
-                               :when (.startsWith (str key) "*")] 
-                          [value (var-get value)])]
-             (println key "=>" value))))
+    (doseq [[key value] (ns-publics ns) 
+             :when (.startsWith (str key) "*")] 
+      (println key "=>" (var-get value)))))
 
 ;calls use on all of the useful contrib stuff
 (use-contribs)
