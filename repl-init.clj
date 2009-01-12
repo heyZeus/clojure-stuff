@@ -30,7 +30,11 @@
                                         (catch Exception _ ret)))
                            [] (contrib-ns contrib-jar))))))
 
-
+ 
+(defn seq-of-rand-strings [maxlength]
+  (repeatedly (fn []
+    (apply str (take (inc (rand-int maxlength))
+                     (repeatedly #(char (+ (int \a) (rand-int 26)))))))))
 
 (defn print-* 
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
