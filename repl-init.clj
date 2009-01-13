@@ -6,13 +6,14 @@
 
 (defn name-to-symbol [lib-name] 
   "Converts the lib-name to a symbol"
-  (symbol (.replaceAll (.replaceAll (.substring lib-name 0 (- (.lastIndexOf lib-name "clj") 1)) "_" "-") "/" ".")))
+    (-> lib-name (.replaceFirst ".clj$" "") (.replaceAll  "_" "-") 
+      (.replaceAll "/" ".") (symbol)))
 
 (defn contrib-ns [jar]
-  "Returns a seq of symbols from the clojure.contrib package, is not recursive and doesn't include test files."
+  "Returns a seq of symbols from the clojure.contrib package, is not recursive"
   (for [f (map #(.getName %) 
                (enumeration-seq (.entries (java.util.zip.ZipFile. jar))))
-        :when (and (.endsWith f "clj") (= 3 (count (.split f "/"))) (not (.contains f "test")))]
+        :when (and (.endsWith f "clj") (= 3 (count (.split f "/"))) (not (.endsWith f "test_clojure.clj")))]
     (name-to-symbol f)))
 
 ;sets the variable to the colure-contrib.jar path, otherwise nil
@@ -29,8 +30,6 @@
                                         (conj ret n)
                                         (catch Exception _ ret)))
                            [] (contrib-ns contrib-jar))))))
-
-
 
 (defn print-* 
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
