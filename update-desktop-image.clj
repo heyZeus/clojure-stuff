@@ -31,8 +31,8 @@
   ([#^java.io.InputStream istream #^String filename]
     (write-stream-to-file istream filename 4096)))
 
-(defn select-file 
-  "Returns a random desktop image filename to download"
+(defn select-new-background
+  "Returns a random desktop filename to download"
   [resolution]
   (let [files (potential-files (URL. ftp-str) resolution)]
     (str ftp-str (nth files (rand-int (count files))))))
@@ -43,9 +43,10 @@
    (let [tmp-image-name (str image-name ".tmp")]
      ; downloading to a tmp file first because overwriting the existing
      ; file causes some problems with gnome
-     (with-open [r (.openStream (URL. (select-file resolution)))]
+     (with-open [r (.openStream (URL. (select-new-background resolution)))]
        (write-stream-to-file r tmp-image-name))
      (sout/sh "mv" "-f" tmp-image-name image-name)
+     ; updates the background image
      (sout/sh "/usr/bin/gconftool" "-s" 
               "/desktop/gnome/background/picture_filename -t string \"" image-name "\"")))
 
