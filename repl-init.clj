@@ -13,7 +13,9 @@
   "Returns a seq of symbols from the clojure.contrib package, is not recursive"
   (for [f (map #(.getName %) 
                (enumeration-seq (.entries (java.util.zip.ZipFile. jar))))
-        :when (and (.endsWith f "clj") (= 3 (count (.split f "/"))) (not (.endsWith f "test_clojure.clj")))]
+        :when (and (.endsWith f "clj") 
+                   (= 3 (count (.split f "/"))) 
+                   (not (or (.endsWith f "test_clojure.clj") (.endsWith f "test_contrib.clj"))))]
     (name-to-symbol f)))
 
 ;sets the variable to the colure-contrib.jar path, otherwise nil
