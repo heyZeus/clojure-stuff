@@ -32,7 +32,7 @@
                                         (conj ret n)
                                         (catch Exception _ ret))) [] (contrib-ns contrib-jar))))))
 
-(defn print-* 
+(defn println* 
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
   ([] (print-* 'clojure.core))
   ([ns] 
@@ -40,13 +40,18 @@
              :when (.startsWith (str key) "*")] 
       (println key "=>" (var-get value)))))
 
-(defn prn-seq 
+(defn println-seq 
   "Prints a sequence or a series of sequences"
   ([] nil)
-  ([s] (doseq [i s] (prn i)))
+  ([s] (loop [sequence s
+              idx (or *print-length* 1000)]
+         (if (not (zero? idx))
+           (do
+             (println (first sequence))
+             (recur (rest sequence) (dec idx))))))
   ([s & ns] 
-   (prn-seq s) 
-   (apply prn-seq ns)))
+   (println-seq s) 
+   (apply println-seq ns)))
 
 ;calls use on all of the useful contrib stuff
 (use-contribs)
