@@ -34,7 +34,7 @@
 
 (defn println* 
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
-  ([] (print-* 'clojure.core))
+  ([] (println* 'clojure.core))
   ([ns] 
     (doseq [[key value] (ns-publics ns) 
              :when (.startsWith (str key) "*")] 
@@ -45,7 +45,7 @@
   ([] nil)
   ([s] (loop [sequence s
               idx (or *print-length* 1000)]
-         (if (not (zero? idx))
+         (if (and (not (zero? idx)) (seq sequence))
            (do
              (println (first sequence))
              (recur (rest sequence) (dec idx))))))
