@@ -1,62 +1,37 @@
 (ns gs-stats
-  (:import (org.apache.commons.httpclient HttpClient NameValuePair URI)
-           (org.apache.commons.httpclient.cookie CookiePolicy CookieSpec)
-           (org.apache.commons.httpclient.methods GetMethod PostMethod DeleteMethod 
-                                                  TraceMethod HeadMethod PutMethod)))
+  (:require [clj-web-crawler :as wc])
+  (:import (java.util Calendar)))
 
-(defmacro send-uri
-  [client uri & body]
-  `(try 
-     (.executeMethod ~client ~uri)
-     ~@body
-     (finally (.releaseConnection ~uri))))
+(defn login 
+  [login pass]
+  (let [site (wc/client "http://www.guidespot.com")
+        login (wc/method "/accounts/login" :post {:login login :password pass})]
+    (wc/crawl site login
+      (if (wc/assert-cookie-names site "_localguides_session")
+        site))))
 
-(defn client 
-  [server]
-  (let [c (HttpClient.)]
-    (.. c (getHostConfiguration) (setHost (URI. server true)))
-    c))
-
-(defn add-param
-  [method k & vs]
-  (doseq [v vs] (.addParameter method (name k) (str v))))
-
-(defn uri
-  ([path method url-params]
-   (let [key-method (if method (keyword method) nil)
-         m (cond 
-             (= :post key-method) (PostMethod. path)
-             (= :delete key-method) (DeleteMethod. path)
-             (= :put key-method) (PutMethod. path)
-             (= :trace key-method) (TraceMethod. path)
-             (= :head key-method) (HeadMethod. path)
-             :else (GetMethod. path))]
-         (doseq [[k v] url-params]
-               (add-param m k v))
-         m))
-  ([path method] (uri path method nil)) 
-  ([path] (uri path nil nil))) 
-
-(defn cookies
+(defn gs-stats-today
   [client]
-  (.. client (getState) (getCookies)))
+  (let [today (Calendar/getInstance)
+        month (+ 1 (.get today (Calendar/MONTH)))
+        year (.get today (Calendar/YEAR))
+        day (.get today (Calendar/DAY_OF_MONTH))
+        today-form (wc/method "admin" :get {"date_from[month]" month
+                                            "date_from[year]" year
+                                            "date_from[day]" day 
+                                            "date_to[month]" month
+                                            "date_to[year]" year
+                                            "date_to[day]" day})
+        result (wc/crawl-response client today-form)]
+        (println result)))
 
-(defn print-cookies
-  [client]
-  (doseq [c (cookies client)] (println c)))
+(let [site (login (first *command-line-args*) (second *command-line-args*))]
+  (gs-stats-today site))
 
-(defn res-str
-  [uri]
-  (.getResponseBodyAsString uri))
 
-(defn assert-cookie-names
-  [client & cookie-names]
-  (let [actual-cookies (cookies client)]
-    (every? (fn [exp-cookie-name] 
-              (some #(= exp-cookie-name (.getName %1)) actual-cookies))
-            cookie-names)))
 
-(let [client (client "http://www.guidespot.com")
-      login (uri "/")] 
-  (send-uri client login   
-    (println (res-str login))))
+      
+      
+        
+  
+
