@@ -48,16 +48,15 @@
          (if (and (not (zero? idx)) (seq sequence))
            (do
              (println (first sequence))
-             (recur (rest sequence) (dec idx))))))
+             (recur (next sequence) (dec idx))))))
   ([s & ns] 
    (println-seq s) 
    (apply println-seq ns)))
 
 ;calls use on all of the useful contrib stuff
-(use-contribs)
-
-(import 'java.io.File)
+;(use-contribs)
 
 ;starts up the line numbered REPL
+(use 'clojure.contrib.repl-ln)
 (repl)
 
