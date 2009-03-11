@@ -32,9 +32,9 @@
                                         (conj ret n)
                                         (catch Exception _ ret))) [] (contrib-ns contrib-jar))))))
 
-(defn println* 
+(defn println-vars* 
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
-  ([] (println* 'clojure.core))
+  ([] (println-vars* 'clojure.core))
   ([ns] 
     (doseq [[key value] (ns-publics ns) 
              :when (.startsWith (str key) "*")] 
