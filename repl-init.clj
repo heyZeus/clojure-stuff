@@ -6,13 +6,16 @@
 
 (defn name-to-symbol [lib-name] 
   "Converts the lib-name to a symbol"
-  (symbol (.replaceAll (.replaceAll (.substring lib-name 0 (- (.lastIndexOf lib-name "clj") 1)) "_" "-") "/" ".")))
+    (-> lib-name (.replaceFirst ".clj$" "") (.replaceAll  "_" "-") 
+      (.replaceAll "/" ".") (symbol)))
 
 (defn contrib-ns [jar]
-  "Returns a seq of symbols from the clojure.contrib package, is not recursive and doesn't include test files."
+  "Returns a seq of symbols from the clojure.contrib package, is not recursive"
   (for [f (map #(.getName %) 
                (enumeration-seq (.entries (java.util.zip.ZipFile. jar))))
-        :when (and (.endsWith f "clj") (= 3 (count (.split f "/"))) (not (.contains f "test")))]
+        :when (and (.endsWith f "clj") 
+                   (= 3 (count (.split f "/"))) 
+                   (not (or (.endsWith f "test_clojure.clj") (.endsWith f "test_contrib.clj"))))]
     (name-to-symbol f)))
 
 ;sets the variable to the colure-contrib.jar path, otherwise nil
@@ -27,26 +30,33 @@
                                       (try 
                                         (use n)
                                         (conj ret n)
-                                        (catch Exception _ ret)))
-                           [] (contrib-ns contrib-jar))))))
+                                        (catch Exception _ ret))) [] (contrib-ns contrib-jar))))))
 
- 
-(defn seq-of-rand-strings [maxlength]
-  (repeatedly (fn []
-    (apply str (take (inc (rand-int maxlength))
-                     (repeatedly #(char (+ (int \a) (rand-int 26)))))))))
-
-(defn print-* 
+(defn println-vars* 
   "Prints all of the vars in the given namespace that start with *. Uses 'clojure.core by default."
-  ([] (print-* 'clojure.core))
+  ([] (println-vars* 'clojure.core))
   ([ns] 
     (doseq [[key value] (ns-publics ns) 
              :when (.startsWith (str key) "*")] 
       (println key "=>" (var-get value)))))
 
+(defn println-seq 
+  "Prints a sequence or a series of sequences"
+  ([] nil)
+  ([s] (loop [sequence s
+              idx (or *print-length* 1000)]
+         (if (and (not (zero? idx)) (seq sequence))
+           (do
+             (println (first sequence))
+             (recur (next sequence) (dec idx))))))
+  ([s & ns] 
+   (println-seq s) 
+   (apply println-seq ns)))
+
 ;calls use on all of the useful contrib stuff
-(use-contribs)
+;(use-contribs)
 
 ;starts up the line numbered REPL
+(use 'clojure.contrib.repl-ln)
 (repl)
 
