@@ -5,7 +5,7 @@
   (:require [clojure.contrib.duck-streams :as streams]))
 
 (def records-per-file 10000)
-(def output-dir "/tmp/acxiom-clj/")
+(def output-dir "/tmp/acxiom-clj2/")
 (def columns {:model_id 0
               :name 1
               :street 2
@@ -25,12 +25,14 @@
 (defn write-xml
   [reader file-name]
   (with-open [o (streams/writer file-name)]
-    (loop [line-cnt 0]
-      (if (and (< line-cnt records-per-file) (.readRecord reader))
+    (loop [line-cnt 0
+           has-next? true]
+      (if (and (< line-cnt records-per-file) has-next?)
          (do
            (.write o (.getRawRecord reader))
            (.println o) 
-           (recur (inc line-cnt)))))))
+           (if (< (inc line-cnt) records-per-file)
+             (recur (inc line-cnt) (.readRecord reader))))))))
  
 (defn process-zip-file 
   [file]
@@ -41,11 +43,12 @@
           (loop [filenum 0]
             (let [o-file (format "%s-%04d.xml" basename filenum)]
                (write-xml reader o-file) 
-               (recur (inc filenum)))))))))
+               (if (.readRecord reader)
+                 (recur (inc filenum))))))))))
 
 (defn main 
   []
-  (pmap #(process-zip-file %1) ["/home/bdoyle/tmp/acxiom_oct/busreg1.zip"])) 
+  (println (time (pmap #(process-zip-file %1) ["/home/bdoyle/tmp/acxiom_oct/busreg1.zip"]))))
 
 ; process all of the acxiom files
 (main)
