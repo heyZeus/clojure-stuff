@@ -47,4 +47,5 @@
   []
   (pmap #(process-zip-file %1) ["/home/bdoyle/tmp/acxiom_oct/busreg1.zip"])) 
 
+; process all of the acxiom files
 (main)
