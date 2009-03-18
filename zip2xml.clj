@@ -1,9 +1,11 @@
 (ns zip2xml
   (:import (java.util.zip ZipFile)
            (com.csvreader CsvReader)
-           (java.nio.charset Charset))
-  (:require [clojure.contrib.duck-streams :as streams])
-  (:use [clojure.contrib.prxml]))
+           (java.nio.charset Charset)
+           (md5 MD5))
+  (:require [clojure.contrib.duck-streams :as streams]
+            [clojure.contrib.prxml :as pxml]
+            [clojure.contrib.str-utils :as sutils]))
 
 (defn to-float
   [s]
@@ -27,6 +29,7 @@
              [:precision 27]
              [:refine "opus_business"]
              [:model_id 0]
+             [:id #(MD5/hash (.toLowerCase (sutils/str-join ":" [(%1 1) (%1 2) (%1 8) (%1 9)])))]
              [:updated "NOW"]])
 
 (defn create-doc-xml
@@ -60,7 +63,7 @@
             (let [o-file (format "%s-%04d.xml" basename filenum)]
                (with-open [o (streams/writer o-file)]
                    (binding [*out* o] 
-                     (prxml [:decl! {:version 1.0}] (create-file-xml reader)))
+                     (pxml/prxml [:decl! {:version 1.0}] (create-file-xml reader)))
                    (if (.readRecord reader)
                      (recur (inc filenum)))))))))))
 
