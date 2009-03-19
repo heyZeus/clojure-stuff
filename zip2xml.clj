@@ -3,8 +3,8 @@
            (com.csvreader CsvReader)
            (java.nio.charset Charset)
            (md5 MD5))
+  (:load  "prxml/prxml")
   (:require [clojure.contrib.duck-streams :as streams]
-            [clojure.contrib.prxml :as pxml]
             [clojure.contrib.str-utils :as sutils]))
 
 (defn to-float
@@ -13,25 +13,25 @@
     (Float/parseFloat s)))
 
 (defn find-cats
-  [values all-cats]
+  [values cats]
   (reduce (fn [[visible search] cat-idx] 
                 (let [cat (values cat-idx)]
                   (if (not cat)
                     [visible search]
-                    (let [visible-cat ((first all-cats) cat)
-                          search-cat ((second all-cats) cat)
-                          ret-visible (if visible-cat (conj visible visible-cat) visible)
-                          ret-search (if search-cat (conj search search-cat) search)]
-                  [visible search]))))
+                    (let [visible-cat ((:visible cats) cat)
+                          search-cat ((:search cats) cat)
+                          ret-visible (if (not (empty? visible-cat)) (conj visible visible-cat) visible)
+                          ret-search (if (not (empty? search-cat)) (apply conj search search-cat) search)]
+                      [ret-visible ret-search]))))
             [#{} #{}]
             (range 48 54)))
 
 (def restaurant-pattern (java.util.regex.Pattern/compile "restaurants" java.util.regex.Pattern/CASE_INSENSITIVE))
 
 (defn add-biz-cats
-  [values all-cats xdoc]
-  (let [[visible search] (find-cats values all-cats)
-        xdoc-place (conj xdoc [:place_type (or (some #(re-seq restaurant-pattern %1) search) "business")])]
+  [values cats xdoc]
+  (let [[visible search] (find-cats values cats)
+        xdoc-place (conj xdoc [:place_type (or (some #(and (re-find restaurant-pattern %1) "restaurant") search) "business")])]
     (reduce (fn [xdoc cat]
               (conj xdoc [:category cat]))
             xdoc-place
@@ -70,7 +70,9 @@
   (vec (.getValues reader)))
 
 (defn capitalize [s]
-  (sutils/re-gsub #"\b." #(.toUpperCase %) (.toLowerCase s)))
+  (if (empty? s)
+     nil
+    (sutils/re-gsub #"\b." #(.toUpperCase %) (.toLowerCase s))))
 
 (defn load-cats
   [file]
@@ -86,7 +88,7 @@
                                      cat6 (capitalize (values 6))]
                                  (recur (assoc visible id (or cat4 cat2)) (assoc search id (remove nil? [cat2 cat4 cat6]))))
           has-next? (recur visible search)
-          :else [visible search])))))
+          :else {:visible visible :search search})))))
 
 (defn create-doc-xml
   [reader cats]
@@ -121,24 +123,23 @@
             (let [o-file (format "%s-%04d.xml" basename filenum)]
                (with-open [o (streams/writer o-file)]
                    (binding [*out* o] 
-                     (pxml/prxml [:decl! {:version 1.0}] (create-file-xml reader cats)))
+                     (prxml/prxml [:decl! {:version 1.0}] (create-file-xml reader cats)))
                    (if (.readRecord reader)
                      (recur (inc filenum)))))))))))
 
 (defn main 
-  []
-  (if (empty? *command-line-args*)
+  [args]
+  (if (empty? args)
      (println "Usage : nacis [zip1 zip2]") 
-     (let [cats (load-cats (first *command-line-args*))
-           files (or (next *command-line-args*)
+     (let [cats (load-cats (first args))
+           files (or (next args)
                      ["/home/bdoyle/tmp/acxiom_oct/busreg1.zip"
                       "/home/bdoyle/tmp/acxiom_oct/busreg2.zip"
                       "/home/bdoyle/tmp/acxiom_oct/busreg3.zip"
                       "/home/bdoyle/tmp/acxiom_oct/busreg4.zip"
                       "/home/bdoyle/tmp/acxiom_oct/busreg5.zip"
                       "/home/bdoyle/tmp/acxiom_oct/busreg6.zip"
-                      "/home/bdoyle/tmp/acxiom_oct/busreg4.zip"])]
+                      "/home/bdoyle/tmp/acxiom_oct/busreg7.zip"])]
         (dorun (pmap #(process-zip-file %1 cats) files)))))
 
-; process all of the acxiom files
-(main)
+(main *command-line-args*)
