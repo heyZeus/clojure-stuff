@@ -23,7 +23,7 @@
 
 (def *html-compatible* false)
 
-(def *print-newlines* true)
+(def *print-newlines* false)
 
 (def #^{:private true} print-xml)  ; forward declaration
 

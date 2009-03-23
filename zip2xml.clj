@@ -2,15 +2,37 @@
   (:import (java.util.zip ZipFile)
            (com.csvreader CsvReader)
            (java.nio.charset Charset)
+           (java.security MessageDigest)
            (md5 MD5))
   (:load  "prxml/prxml")
   (:require [clojure.contrib.duck-streams :as streams]
             [clojure.contrib.str-utils :as sutils]))
 
-(defn to-float
+(def name-idx 1)
+(def street-idx 2)
+(def city-idx 8)
+(def province-idx 9)
+(def records-per-file 10000)
+(def output-dir "/tmp/acxiom-clj/")
+
+(defn md5
+  [s]
+  (let [md (MessageDigest/getInstance "MD5")
+        _ (.update md (.getBytes s))
+        digest (.digest md)]
+    (loop [length 0 hex ""]
+      (if (< length (alength digest))
+        (recur (inc length) (str hex (format "%02x" (aget digest length))))
+        hex))))
+
+(defn format-float
   [s]
   (if (not (empty? s))
-    (Float/parseFloat s)))
+    (format "%.6f" (Float/parseFloat s))))
+
+(defn add-field
+  [n v]
+  ["field" {:name n} v])
 
 (defn find-cats
   [values cats]
@@ -20,65 +42,81 @@
                     [visible search]
                     (let [visible-cat ((:visible cats) cat)
                           search-cat ((:search cats) cat)
-                          ret-visible (if (not (empty? visible-cat)) (conj visible visible-cat) visible)
-                          ret-search (if (not (empty? search-cat)) (apply conj search search-cat) search)]
+                          ret-visible (if (not (empty? visible-cat)) 
+                                        (conj visible visible-cat) visible)
+                          ret-search (if (not (empty? search-cat)) 
+                                       (apply conj search search-cat) search)]
                       [ret-visible ret-search]))))
             [#{} #{}]
             (range 48 54)))
 
-(def restaurant-pattern (java.util.regex.Pattern/compile "restaurants" java.util.regex.Pattern/CASE_INSENSITIVE))
+(def restaurant-pattern 
+  (java.util.regex.Pattern/compile "restaurants" java.util.regex.Pattern/CASE_INSENSITIVE))
+
+(defn biz-cats
+  [cats xdoc]
+  (reduce (fn [xdoc cat]
+             (conj xdoc (add-field "category" cat)))
+           xdoc
+           cats))
 
 (defn add-biz-cats
   [values cats xdoc]
   (let [[visible search] (find-cats values cats)
-        xdoc-place (conj xdoc [:place_type (or (some #(and (re-find restaurant-pattern %1) "restaurant") search) "business")])]
-    (reduce (fn [xdoc cat]
-              (conj xdoc [:category cat]))
-            xdoc-place
-            visible)))
+        place-type (or (some #(and (re-find restaurant-pattern %1) "restaurant") search) "business")
+        xdoc (conj xdoc (add-field "place_type" place-type))
+        xdoc (biz-cats visible xdoc)
+        md5-str (.toLowerCase (sutils/str-join ":" [(values name-idx) 
+                                                    (values street-idx) 
+                                                    (values city-idx) 
+                                                    (values province-idx)
+                                                    place-type]))]
+    (conj xdoc (add-field "id" (md5 md5-str)))))
 
-(def name-idx 1)
-(def street-idx 2)
-(def city-idx 8)
-(def province-idx 9)
+(defn format-phone
+  [values]
+  (let [phone (values 12)]
+    (if (= 10 (count phone))
+      (str "(" (.substring phone 0 3) ") " (.substring phone 3 6) "-" (.substring phone 6))
+      phone)))
 
-(def records-per-file 10000)
-(def output-dir "/tmp/acxiom-clj2/")
-(def fields [[:name name-idx]
-             [:street street-idx]
-             [:city city-idx]
-             [:province_name "province_name"]
-             [:province province-idx]
-             [:postal-code 10]
-             [:phone 12]
-             [:fax 64]
-             [:website 32]
-             [:model "Opus::Business"]
-             [:latitude #(to-float (%1 25))]
-             [:longitude #(to-float (%1 26))]
-             [:precision 27]
-             [:refine "opus_business"]
-             [:model_id 0]
-             [:id #(MD5/hash (.toLowerCase (sutils/str-join ":" [(%1 name-idx) 
-                                                                 (%1 street-idx) 
-                                                                 (%1 city-idx) 
-                                                                 (%1 province-idx)])))]
-             [:updated "NOW"]])
+(defn format-web
+  [values]
+  (let [url (values 32)]
+    (if (and url (not (empty? url)) (not (.startsWith url "http")))
+      (str "http://" url)
+      url)))
+
+(def fields [["name" name-idx]
+             ["street" street-idx]
+             ["city" city-idx]
+             ["province_name" "province_name"]
+             ["province" province-idx]
+             ["postal_code" 10]
+             ["phone" #(format-phone %1)]
+             ["fax" 64]
+             ["website" #(format-web %1)]
+             ["model" "Opus::Business"]
+             ["latitude" #(format-float (%1 25))]
+             ["longitude" #(format-float (%1 26))]
+             ["precision" 27]
+             ["refine" "opus_business"]
+             ["model_id" 0]
+             ["updated" "NOW"]])
 
 (defn get-values
   [reader]
   (vec (.getValues reader)))
 
-(defn capitalize [s]
-  (if (empty? s)
-     nil
+(defn capitalize 
+  [s]
+  (if (not (empty? s))
     (sutils/re-gsub #"\b." #(.toUpperCase %) (.toLowerCase s))))
 
 (defn load-cats
   [file]
   (with-open [reader (CsvReader. file \, (Charset/forName "US-ASCII"))]
-    (loop [visible {}
-           search {}]
+    (loop [visible {} search {}]
       (let [has-next? (.readRecord reader)
             values (get-values reader)]
         (cond 
@@ -86,32 +124,36 @@
                                      cat2 (capitalize (values 2))
                                      cat4 (capitalize (values 4))
                                      cat6 (capitalize (values 6))]
-                                 (recur (assoc visible id (or cat4 cat2)) (assoc search id (remove nil? [cat2 cat4 cat6]))))
+                                 (recur (assoc visible id (or cat4 cat2)) 
+                                        (assoc search id (remove nil? [cat2 cat4 cat6]))))
           has-next? (recur visible search)
           :else {:visible visible :search search})))))
 
 (defn create-doc-xml
   [reader cats]
   (let [values (get-values reader)]
-    (if (not (empty? values))
+    (if (seq values)
       (let [xdoc (reduce (fn [ret [field k]] 
-                            (conj ret (cond 
-                                        (string? k) [field k]
-                                        (number? k) [field (values k)]
-                                        :else [field (k values)])))
+                            (conj ret (add-field field (cond 
+                                                         (string? k) k
+                                                         (number? k) (values k)
+                                                         :else (k values)))))
                         [:doc]
                         fields)]
         (add-biz-cats values cats xdoc)))))
 
 (defn create-file-xml
-  [reader
-   cats] 
-  (loop [line-cnt 0
-         xml [:add]
-         next-record? true]
-    (if (and (< line-cnt records-per-file) next-record?)
-      (recur (inc line-cnt) (conj xml (create-doc-xml reader cats)) (.readRecord reader))
-      xml)))
+  [reader cats] 
+  (loop [line-cnt 0 
+         xml [:add]] 
+      (cond 
+        (and (< line-cnt records-per-file) (.readRecord reader))
+          (let [new-xdoc (create-doc-xml reader cats)
+                xdoc (if new-xdoc (conj xml new-xdoc) xml)
+                cnt (if new-xdoc (inc line-cnt) line-cnt)]
+             (recur cnt xdoc))
+        (> line-cnt 0) xml
+        :else nil)))
  
 (defn process-zip-file 
   [file cats]
@@ -122,10 +164,13 @@
           (loop [filenum 0]
             (let [o-file (format "%s-%04d.xml" basename filenum)]
                (with-open [o (streams/writer o-file)]
-                   (binding [*out* o] 
-                     (prxml/prxml [:decl! {:version 1.0}] (create-file-xml reader cats)))
-                   (if (.readRecord reader)
-                     (recur (inc filenum)))))))))))
+                   (binding [*out* o
+                             prxml/*print-newlines* true] 
+                     (let [xdoc (create-file-xml reader cats)]
+                       (if xdoc
+                         (do 
+                           (prxml/prxml [:decl! {:version 1.0}] xdoc)
+                           (recur (inc filenum))))))))))))))
 
 (defn main 
   [args]
@@ -133,13 +178,15 @@
      (println "Usage : nacis [zip1 zip2]") 
      (let [cats (load-cats (first args))
            files (or (next args)
-                     ["/home/bdoyle/tmp/acxiom_oct/busreg1.zip"
-                      "/home/bdoyle/tmp/acxiom_oct/busreg2.zip"
-                      "/home/bdoyle/tmp/acxiom_oct/busreg3.zip"
-                      "/home/bdoyle/tmp/acxiom_oct/busreg4.zip"
-                      "/home/bdoyle/tmp/acxiom_oct/busreg5.zip"
-                      "/home/bdoyle/tmp/acxiom_oct/busreg6.zip"
-                      "/home/bdoyle/tmp/acxiom_oct/busreg7.zip"])]
+                     ["/home/bdoyle/tmp/acxiom_feb/busreg1.zip"
+                      "/home/bdoyle/tmp/acxiom_feb/busreg2.zip"
+                      "/home/bdoyle/tmp/acxiom_feb/busreg3.zip"
+                      "/home/bdoyle/tmp/acxiom_feb/busreg4.zip"
+                      "/home/bdoyle/tmp/acxiom_feb/busreg5.zip"
+                      "/home/bdoyle/tmp/acxiom_feb/busreg6.zip"
+                      "/home/bdoyle/tmp/acxiom_feb/busreg7.zip"])]
         (dorun (pmap #(process-zip-file %1 cats) files)))))
 
 (main *command-line-args*)
+
+

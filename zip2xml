@@ -1,0 +1,7 @@
+#!/bin/sh
+
+CLJ_OPTS='-server'
+
+time clj ./zip2xml.clj /home/bdoyle/tmp/acxiom_feb/naics.csv /home/bdoyle/tmp/acxiom_feb/busreg1.zip
+#time clj ./zip2xml.clj /home/bdoyle/tmp/acxiom_feb/naics.csv
+
