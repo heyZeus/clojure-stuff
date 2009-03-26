@@ -10,10 +10,11 @@
 
 (def name-idx 1)
 (def street-idx 2)
-(def city-idx 8)
-(def province-idx 9)
+(def city-idx 10)
+(def province-idx 11)
 (def records-per-file 10000)
 (def output-dir "/tmp/acxiom-clj/")
+(def *provinces* {})
 
 (defn md5
   [s]
@@ -75,14 +76,14 @@
 
 (defn format-phone
   [values]
-  (let [phone (values 12)]
+  (let [phone (values 16)]
     (if (= 10 (count phone))
       (str "(" (.substring phone 0 3) ") " (.substring phone 3 6) "-" (.substring phone 6))
       phone)))
 
 (defn format-web
   [values]
-  (let [url (values 32)]
+  (let [url (values 38)]
     (if (and url (not (empty? url)) (not (.startsWith url "http")))
       (str "http://" url)
       url)))
@@ -90,15 +91,15 @@
 (def fields [["name" name-idx]
              ["street" street-idx]
              ["city" city-idx]
-             ["province_name" "province_name"]
+             ["province_name" #(*provinces* (%1 province-idx))]
              ["province" province-idx]
-             ["postal_code" 10]
+             ["postal_code" 13]
              ["phone" #(format-phone %1)]
-             ["fax" 64]
+             ["fax" 59]
              ["website" #(format-web %1)]
              ["model" "Opus::Business"]
-             ["latitude" #(format-float (%1 25))]
-             ["longitude" #(format-float (%1 26))]
+             ["latitude" #(format-float (%1 29))]
+             ["longitude" #(format-float (%1 30))]
              ["precision" 27]
              ["refine" "opus_business"]
              ["model_id" 0]
@@ -129,6 +130,16 @@
           has-next? (recur visible search)
           :else {:visible visible :search search})))))
 
+(defn load-provinces
+  [file]
+  (with-open [reader (CsvReader. file \, (Charset/forName "US-ASCII"))]
+    (loop [provinces {}]
+      (let [has-next? (.readRecord reader)
+            values (get-values reader)]
+        (if (seq values)
+          (recur (assoc provinces (values 0) (capitalize (values 1))))
+          provinces)))))
+
 (defn create-doc-xml
   [reader cats]
   (let [values (get-values reader)]
@@ -156,7 +167,7 @@
         :else nil)))
  
 (defn process-zip-file 
-  [file cats]
+  [file cats provs]
   (let [zfile (ZipFile. file)]
     (doseq [f (enumeration-seq (.entries zfile))]
       (let [basename (str output-dir (.getName f))]
@@ -165,7 +176,8 @@
             (let [o-file (format "%s-%04d.xml" basename filenum)]
                (with-open [o (streams/writer o-file)]
                    (binding [*out* o
-                             prxml/*print-newlines* true] 
+                             prxml/*print-newlines* true
+                             *provinces* provs] 
                      (let [xdoc (create-file-xml reader cats)]
                        (if xdoc
                          (do 
@@ -177,6 +189,7 @@
   (if (empty? args)
      (println "Usage : nacis [zip1 zip2]") 
      (let [cats (load-cats (first args))
+           provs (load-provinces "/home/bdoyle/tmp/acxiom_feb/prov.csv")
            files (or (next args)
                      ["/home/bdoyle/tmp/acxiom_feb/busreg1.zip"
                       "/home/bdoyle/tmp/acxiom_feb/busreg2.zip"
@@ -185,7 +198,7 @@
                       "/home/bdoyle/tmp/acxiom_feb/busreg5.zip"
                       "/home/bdoyle/tmp/acxiom_feb/busreg6.zip"
                       "/home/bdoyle/tmp/acxiom_feb/busreg7.zip"])]
-        (dorun (pmap #(process-zip-file %1 cats) files)))))
+        (dorun (pmap #(process-zip-file %1 cats provs) files)))))
 
 (main *command-line-args*)
 
