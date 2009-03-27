@@ -2,6 +2,7 @@
   (:import (java.util.zip ZipFile)
            (com.csvreader CsvReader)
            (java.nio.charset Charset)
+           (java.io File)
            (java.security MessageDigest)
            (md5 MD5))
   (:load  "prxml/prxml")
@@ -15,6 +16,7 @@
 (def records-per-file 10000)
 (def output-dir "/tmp/acxiom-clj/")
 (def *provinces* {})
+(def *categories* {})
 
 (defn md5
   [s]
@@ -62,8 +64,8 @@
            cats))
 
 (defn add-biz-cats
-  [values cats xdoc]
-  (let [[visible search] (find-cats values cats)
+  [values xdoc]
+  (let [[visible search] (find-cats values *categories*)
         place-type (or (some #(and (re-find restaurant-pattern %1) "restaurant") search) "business")
         xdoc (conj xdoc (add-field "place_type" place-type))
         xdoc (biz-cats visible xdoc)
@@ -141,7 +143,7 @@
           provinces)))))
 
 (defn create-doc-xml
-  [reader cats]
+  [reader]
   (let [values (get-values reader)]
     (if (seq values)
       (let [xdoc (reduce (fn [ret [field k]] 
@@ -151,15 +153,15 @@
                                                          :else (k values)))))
                         [:doc]
                         fields)]
-        (add-biz-cats values cats xdoc)))))
+        (add-biz-cats values xdoc)))))
 
 (defn create-file-xml
-  [reader cats] 
+  [reader] 
   (loop [line-cnt 0 
          xml [:add]] 
       (cond 
         (and (< line-cnt records-per-file) (.readRecord reader))
-          (let [new-xdoc (create-doc-xml reader cats)
+          (let [new-xdoc (create-doc-xml reader)
                 xdoc (if new-xdoc (conj xml new-xdoc) xml)
                 cnt (if new-xdoc (inc line-cnt) line-cnt)]
              (recur cnt xdoc))
@@ -167,22 +169,32 @@
         :else nil)))
  
 (defn process-zip-file 
-  [file cats provs]
+  [file provinces categories] 
   (let [zfile (ZipFile. file)]
     (doseq [f (enumeration-seq (.entries zfile))]
-      (let [basename (str output-dir (.getName f))]
-        (with-open [reader (CsvReader. (.getInputStream zfile f) \, (Charset/forName "US-ASCII"))]
-          (loop [filenum 0]
-            (let [o-file (format "%s-%04d.xml" basename filenum)]
-               (with-open [o (streams/writer o-file)]
-                   (binding [*out* o
-                             prxml/*print-newlines* true
-                             *provinces* provs] 
-                     (let [xdoc (create-file-xml reader cats)]
-                       (if xdoc
-                         (do 
-                           (prxml/prxml [:decl! {:version 1.0}] xdoc)
-                           (recur (inc filenum))))))))))))))
+      (binding [*categories* categories
+                *provinces* provinces]
+        (let [basename (str output-dir (.getName f))]
+          (with-open [reader (CsvReader. (.getInputStream zfile f) \, (Charset/forName "US-ASCII"))]
+            (loop [filenum 0]
+              (if-let [xdoc (create-file-xml reader)]
+                (let [o-file (format "%s-%04d.xml" basename filenum)]
+                  (with-open [o (streams/writer o-file)]
+                    (binding [*out* o
+                              prxml/*print-newlines* true]
+                      (prxml/prxml [:decl! {:version 1.0}] xdoc)))
+                  (recur (inc filenum)))))))))))
+
+(defn acxiom-files 
+  [basedir]
+  (reduce (fn [ret file]
+            (if (and (.startsWith file "busreg") 
+                     (.endsWith file "zip")
+                     (.isFile (File. (str basedir file))))
+              (conj ret (str basedir file))
+              ret))
+          []
+          (.list (File. basedir))))
 
 (defn main 
   [args]
@@ -190,15 +202,9 @@
      (println "Usage : nacis [zip1 zip2]") 
      (let [cats (load-cats (first args))
            provs (load-provinces "/home/bdoyle/tmp/acxiom_feb/prov.csv")
-           files (or (next args)
-                     ["/home/bdoyle/tmp/acxiom_feb/busreg1.zip"
-                      "/home/bdoyle/tmp/acxiom_feb/busreg2.zip"
-                      "/home/bdoyle/tmp/acxiom_feb/busreg3.zip"
-                      "/home/bdoyle/tmp/acxiom_feb/busreg4.zip"
-                      "/home/bdoyle/tmp/acxiom_feb/busreg5.zip"
-                      "/home/bdoyle/tmp/acxiom_feb/busreg6.zip"
-                      "/home/bdoyle/tmp/acxiom_feb/busreg7.zip"])]
-        (dorun (pmap #(process-zip-file %1 cats provs) files)))))
+           afiles (acxiom-files "/home/bdoyle/tmp/acxiom_feb/")
+           files (or (next args) afiles)]
+       (dorun (pmap #(process-zip-file %1 provs cats) files)))))
 
 (main *command-line-args*)
 
