@@ -5,15 +5,15 @@
            (java.io File)
            (java.security MessageDigest)
            (md5 MD5))
-  (:load  "prxml/prxml")
   (:require [clojure.contrib.duck-streams :as streams]
-            [clojure.contrib.str-utils :as sutils]))
+            [clojure.contrib.str-utils :as sutils]
+            [clojure.contrib.prxml :as prxml]))
 
 (def name-idx 1)
 (def street-idx 2)
 (def city-idx 10)
 (def province-idx 11)
-(def records-per-file 10000)
+(def records-per-file 1000)
 (def output-dir "/tmp/acxiom-clj/")
 (def *provinces* {})
 (def *categories* {})
@@ -90,6 +90,12 @@
       (str "http://" url)
       url)))
 
+(defn format-precision
+  [s]
+  (try
+    (format "%s" (Integer/parseInt s))
+    (catch Exception _ "0")))
+
 (def fields [["name" name-idx]
              ["street" street-idx]
              ["city" city-idx]
@@ -102,7 +108,7 @@
              ["model" "Opus::Business"]
              ["latitude" #(format-float (%1 29))]
              ["longitude" #(format-float (%1 30))]
-             ["precision" 27]
+             ["precision" #(format-precision (%1 27))]
              ["refine" "opus_business"]
              ["model_id" 0]
              ["updated" "NOW"]])
@@ -181,7 +187,7 @@
                 (let [o-file (format "%s-%04d.xml" basename filenum)]
                   (with-open [o (streams/writer o-file)]
                     (binding [*out* o
-                              prxml/*print-newlines* true]
+                              prxml/*prxml-indent* 2]
                       (prxml/prxml [:decl! {:version 1.0}] xdoc)))
                   (recur (inc filenum)))))))))))
 
