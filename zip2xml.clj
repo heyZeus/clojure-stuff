@@ -14,7 +14,7 @@
 (def city-idx 10)
 (def province-idx 11)
 (def records-per-file 1000)
-(def output-dir "/tmp/acxiom-clj/")
+(def output-dir "/home/bdoyle/tmp/acxiom-clj/")
 (def *provinces* {})
 (def *categories* {})
 
@@ -35,7 +35,7 @@
 
 (defn add-field
   [n v]
-  ["field" {:name n} v])
+  ["field" {:name n} (if v (.toString v) "")])
 
 (defn find-cats
   [values cats]
@@ -63,7 +63,7 @@
            xdoc
            cats))
 
-(defn add-biz-cats
+(defn add-more-fields
   [values xdoc]
   (let [[visible search] (find-cats values *categories*)
         place-type (or (some #(and (re-find restaurant-pattern %1) "restaurant") search) "business")
@@ -77,11 +77,10 @@
     (conj xdoc (add-field "id" (md5 md5-str)))))
 
 (defn format-phone
-  [values]
-  (let [phone (values 16)]
-    (if (= 10 (count phone))
-      (str "(" (.substring phone 0 3) ") " (.substring phone 3 6) "-" (.substring phone 6))
-      phone)))
+  [phone]
+  (if (= 10 (count phone))
+    (str "(" (.substring phone 0 3) ") " (.substring phone 3 6) "-" (.substring phone 6))
+    phone))
 
 (defn format-web
   [values]
@@ -93,24 +92,38 @@
 (defn format-precision
   [s]
   (try
-    (format "%s" (Integer/parseInt s))
+    (Integer/parseInt s)
     (catch Exception _ "0")))
+
+(defn province-name
+  [values]
+  (*provinces* (values province-idx)))
+
+(defn keywords
+  [values]
+  (sutils/str-join " " [(values name-idx) 
+                        (values city-idx) 
+                        (values province-idx)
+                        (province-name values)
+                        "business"]))
 
 (def fields [["name" name-idx]
              ["street" street-idx]
              ["city" city-idx]
-             ["province_name" #(*provinces* (%1 province-idx))]
+             ["province_name" #(province-name %1)]
              ["province" province-idx]
              ["postal_code" 13]
-             ["phone" #(format-phone %1)]
-             ["fax" 59]
+             ["phone" #(format-phone (%1 16))]
+             ["fax" #(format-phone (%1 59))]
              ["website" #(format-web %1)]
+             ["cities" city-idx]
              ["model" "Opus::Business"]
              ["latitude" #(format-float (%1 29))]
              ["longitude" #(format-float (%1 30))]
-             ["precision" #(format-precision (%1 27))]
+             ["precision" #(format-precision (%1 31))]
              ["refine" "opus_business"]
              ["model_id" 0]
+             ["keywords" #(keywords %1)]
              ["updated" "NOW"]])
 
 (defn get-values
@@ -153,13 +166,14 @@
   (let [values (get-values reader)]
     (if (seq values)
       (let [xdoc (reduce (fn [ret [field k]] 
-                            (conj ret (add-field field (cond 
-                                                         (string? k) k
-                                                         (number? k) (values k)
-                                                         :else (k values)))))
+                           (let [value (cond                   
+                                         (string? k) k         
+                                         (number? k) (values k)
+                                         :else (k values))]
+                            (conj ret (add-field field value)))) 
                         [:doc]
                         fields)]
-        (add-biz-cats values xdoc)))))
+        (add-more-fields values xdoc)))))
 
 (defn create-file-xml
   [reader] 
@@ -208,7 +222,7 @@
      (println "Usage : nacis [zip1 zip2]") 
      (let [cats (load-cats (first args))
            provs (load-provinces "/home/bdoyle/tmp/acxiom_feb/prov.csv")
-           afiles (acxiom-files "/home/bdoyle/tmp/acxiom_feb/")
+           afiles (acxiom-files "/home/bdoyle/tmp/acxiom_march/")
            files (or (next args) afiles)]
        (dorun (pmap #(process-zip-file %1 provs cats) files)))))
 
