@@ -13,7 +13,7 @@
 (def street-idx 2)
 (def city-idx 10)
 (def province-idx 11)
-(def records-per-file 1000)
+(def records-per-file 10000)
 (def output-dir "/home/bdoyle/tmp/acxiom-clj/")
 (def *provinces* {})
 (def *categories* {})
