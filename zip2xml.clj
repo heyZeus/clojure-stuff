@@ -9,13 +9,80 @@
             [clojure.contrib.str-utils :as sutils]
             [clojure.contrib.prxml :as prxml]))
 
+(defn capitalize 
+  [s]
+  (if (not (empty? s))
+    (sutils/re-gsub #"\b." #(.toUpperCase %) (.toLowerCase s))))
+
+;; reusing this indexes so creating vars
 (def name-idx 1)
 (def street-idx 2)
 (def city-idx 10)
 (def province-idx 11)
 (def records-per-file 10000)
 (def output-dir "/home/bdoyle/tmp/acxiom-clj/")
-(def *provinces* {})
+(def *provinces* (reduce (fn [ret [abb state-name]]
+                           (assoc ret abb (capitalize state-name)))
+                        {}
+                        {"AL" "ALABAMA"
+                        "AK" "ALASKA"
+                        "AS" "AMERICAN SAMOA"
+                        "AZ" "ARIZONA"
+                        "AR" "ARKANSAS"
+                        "CA" "CALIFORNIA"
+                        "CO" "COLORADO"
+                        "CT" "CONNECTICUT"
+                        "DE" "DELAWARE"
+                        "DC" "DISTRICT OF COLUMBIA"
+                        "FM" "FEDERATED STATES OF MICRONESIA"
+                        "FL" "FLORIDA"
+                        "GA" "GEORGIA"
+                        "GU" "GUAM"
+                        "HI" "HAWAII"
+                        "ID" "IDAHO"
+                        "IL" "ILLINOIS"
+                        "IN" "INDIANA"
+                        "IA" "IOWA"
+                        "KS" "KANSAS"
+                        "KY" "KENTUCKY"
+                        "LA" "LOUISIANA"
+                        "ME" "MAINE"
+                        "MH" "MARSHALL ISLANDS"
+                        "MD" "MARYLAND"
+                        "MA" "MASSACHUSETTS"
+                        "MI" "MICHIGAN"
+                        "MN" "MINNESOTA"
+                        "MS" "MISSISSIPPI"
+                        "MO" "MISSOURI"
+                        "MT" "MONTANA"
+                        "NE" "NEBRASKA"
+                        "NV" "NEVADA"
+                        "NH" "NEW HAMPSHIRE"
+                        "NJ" "NEW JERSEY"
+                        "NM" "NEW MEXICO"
+                        "NY" "NEW YORK"
+                        "NC" "NORTH CAROLINA"
+                        "ND" "NORTH DAKOTA"
+                        "MP" "NORTHERN MARIANA ISLANDS"
+                        "OH" "OHIO"
+                        "OK" "OKLAHOMA"
+                        "OR" "OREGON"
+                        "PW" "PALAU"
+                        "PA" "PENNSYLVANIA"
+                        "PR" "PUERTO RICO"
+                        "RI" "RHODE ISLAND"
+                        "SC" "SOUTH CAROLINA"
+                        "SD" "SOUTH DAKOTA"
+                        "TN" "TENNESSEE"
+                        "TX" "TEXAS"
+                        "UT" "UTAH"
+                        "VT" "VERMONT"
+                        "VI" "VIRGIN ISLANDS"
+                        "VA" "VIRGINIA"
+                        "WA" "WASHINGTON"
+                        "WV" "WEST VIRGINIA"
+                        "WI" "WISCONSIN"
+                        "WY" "WYOMING"}))
 (def *categories* {})
 
 (defn md5
@@ -35,7 +102,7 @@
 
 (defn add-field
   [n v]
-  ["field" {:name n} (if v (.toString v) "")])
+  ["field" {:name n} (let [s (str v)] (if (empty? s) "" s))])
 
 (defn find-cats
   [values cats]
@@ -112,7 +179,7 @@
              ["city" city-idx]
              ["province_name" #(province-name %1)]
              ["province" province-idx]
-             ["postal_code" 13]
+             ["postal_code" 11]
              ["phone" #(format-phone (%1 16))]
              ["fax" #(format-phone (%1 59))]
              ["website" #(format-web %1)]
@@ -129,11 +196,6 @@
 (defn get-values
   [reader]
   (vec (.getValues reader)))
-
-(defn capitalize 
-  [s]
-  (if (not (empty? s))
-    (sutils/re-gsub #"\b." #(.toUpperCase %) (.toLowerCase s))))
 
 (defn load-cats
   [file]
@@ -189,11 +251,10 @@
         :else nil)))
  
 (defn process-zip-file 
-  [file provinces categories] 
+  [file categories] 
   (let [zfile (ZipFile. file)]
     (doseq [f (enumeration-seq (.entries zfile))]
-      (binding [*categories* categories
-                *provinces* provinces]
+      (binding [*categories* categories]
         (let [basename (str output-dir (.getName f))]
           (with-open [reader (CsvReader. (.getInputStream zfile f) \, (Charset/forName "US-ASCII"))]
             (loop [filenum 0]
@@ -221,11 +282,12 @@
   (if (empty? args)
      (println "Usage : nacis [zip1 zip2]") 
      (let [cats (load-cats (first args))
-           provs (load-provinces "/home/bdoyle/tmp/acxiom_feb/prov.csv")
            afiles (acxiom-files "/home/bdoyle/tmp/acxiom_march/")
            files (or (next args) afiles)]
-       (dorun (pmap #(process-zip-file %1 provs cats) files)))))
+       (dorun (pmap #(process-zip-file %1 cats) files)))))
 
 (main *command-line-args*)
+
+
 
 

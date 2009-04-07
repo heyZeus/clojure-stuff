@@ -3,5 +3,5 @@
 CLJ_OPTS='-server'
 
 #clj /home/bdoyle/share/github/clojure-stuff/zip2xml.clj /home/bdoyle/tmp/acxiom_march/naics.csv /home/bdoyle/tmp/acxiom_march/busreg1.zip
-clj /home/bdoyle/share/github/clojure-stuff/zip2xml.clj /home/bdoyle/tmp/acxiom_march/naics.csv
+clj /home/bdoyle/share/github/clojure-stuff/zip2xml.clj /home/bdoyle/tmp/acxiom_march/naics.csv /home/bdoyle/tmp/acxiom_march/busreg7.zip
 
