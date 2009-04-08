@@ -179,7 +179,7 @@
              ["city" city-idx]
              ["province_name" #(province-name %1)]
              ["province" province-idx]
-             ["postal_code" 11]
+             ["postal_code" 12]
              ["phone" #(format-phone (%1 16))]
              ["fax" #(format-phone (%1 59))]
              ["website" #(format-web %1)]
