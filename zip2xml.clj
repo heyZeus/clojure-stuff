@@ -14,7 +14,7 @@
   (if (not (empty? s))
     (sutils/re-gsub #"\b." #(.toUpperCase %) (.toLowerCase s))))
 
-;; reusing this indexes so creating vars
+;; reusing these indexes so need to create vars
 (def name-idx 1)
 (def street-idx 2)
 (def city-idx 10)
@@ -98,11 +98,11 @@
 (defn format-float
   [s]
   (if (not (empty? s))
-    (format "%.6f" (Float/parseFloat s))))
+    (format "%.6f" (Float/parseFloat s))
+    0.0))
 
 (defn add-field
-  [n v]
-  ["field" {:name n} (let [s (str v)] (if (empty? s) "" s))])
+  [n v] ["field" {:name n} (let [s (str v)] (if (empty? s) "" s))])
 
 (defn find-cats
   [values cats]
@@ -113,12 +113,14 @@
                     (let [visible-cat ((:visible cats) cat)
                           search-cat ((:search cats) cat)
                           ret-visible (if (not (empty? visible-cat)) 
-                                        (conj visible visible-cat) visible)
+                                        (conj visible visible-cat) 
+                                        visible)
                           ret-search (if (not (empty? search-cat)) 
-                                       (apply conj search search-cat) search)]
+                                       (apply conj search search-cat) 
+                                       search)]
                       [ret-visible ret-search]))))
             [#{} #{}]
-            (range 48 54)))
+            (range 53 59)))
 
 (def restaurant-pattern 
   (java.util.regex.Pattern/compile "restaurants" java.util.regex.Pattern/CASE_INSENSITIVE))
@@ -134,8 +136,8 @@
   [values xdoc]
   (let [[visible search] (find-cats values *categories*)
         place-type (or (some #(and (re-find restaurant-pattern %1) "restaurant") search) "business")
-        xdoc (conj xdoc (add-field "place_type" place-type))
         xdoc (biz-cats visible xdoc)
+        xdoc (conj xdoc (add-field "place_type" place-type))
         md5-str (.toLowerCase (sutils/str-join ":" [(values name-idx) 
                                                     (values street-idx) 
                                                     (values city-idx) 
@@ -262,7 +264,7 @@
                 (let [o-file (format "%s-%04d.xml" basename filenum)]
                   (with-open [o (streams/writer o-file)]
                     (binding [*out* o
-                              prxml/*prxml-indent* 2]
+                              prxml/*prxml-indent* 2] 
                       (prxml/prxml [:decl! {:version 1.0}] xdoc)))
                   (recur (inc filenum)))))))))))
 
@@ -280,14 +282,10 @@
 (defn main 
   [args]
   (if (empty? args)
-     (println "Usage : nacis [zip1 zip2]") 
+     (println "Usage : nacis.csv [zip1 zip2]") 
      (let [cats (load-cats (first args))
            afiles (acxiom-files "/home/bdoyle/tmp/acxiom_march/")
            files (or (next args) afiles)]
        (dorun (pmap #(process-zip-file %1 cats) files)))))
 
 (main *command-line-args*)
-
-
-
-

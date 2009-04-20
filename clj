@@ -18,4 +18,4 @@ elif [ $1 == "gorilla" ]; then
 fi
 
 $PRE $JAVA $OPTS $PARAMS
-
+exit
