@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<add>
+  <doc>
+    <field name="name">Michael Anthony Lounge</field>
+    <field name="street">1251 River Rd</field>
+    <field name="city">Agawam</field>
+    <field name="province_name">Massachusetts</field>
+    <field name="province">MA</field>
+    <field name="postal_code">01001</field>
+    <field name="phone">(413) 786-2898</field>
+    <field name="fax"></field>
+    <field name="website"></field>
+    <field name="cities">Agawam</field>
+    <field name="model">Opus::Business</field>
+    <field name="latitude">42.080925</field>
+    <field name="longitude">-72.585693</field>
+    <field name="precision">1</field>
+    <field name="refine">opus_business</field>
+    <field name="model_id">0000253577</field>
+    <field name="keywords">Michael Anthony Lounge Agawam MA Massachusetts business</field>
+    <field name="updated">NOW</field>
+    <field name="category">Bars, Grills &amp; Lounges</field>
+    <field name="category">Bars &amp; Lounges</field>
+    <field name="place_type">restaurant</field>
+    <field name="id">8043a7cd0245eb59112bc35165df31cf</field>
+    <blah>asdf</blah>
+  </doc>
+  <doc>
+    <field name="name">Michael Anthony Lounge</field>
+    <field name="street">1429 S. Ulster St.</field>
+    <field name="city">Agawam</field>
+    <field name="province_name">Massachusetts</field>
+    <field name="province">MA</field>
+    <field name="postal_code">01001</field>
+    <field name="phone">(413) 786-2898</field>
+    <field name="fax"></field>
+    <field name="website"></field>
+    <field name="cities">Agawam</field>
+    <field name="model">Opus::Business</field>
+    <field name="latitude">42.080925</field>
+    <field name="longitude">-72.585693</field>
+    <field name="precision">1</field>
+    <field name="refine">opus_business</field>
+    <field name="model_id">0000253577</field>
+    <field name="keywords">Michael Anthony Lounge Agawam MA Massachusetts business</field>
+    <field name="updated">NOW</field>
+    <field name="category">Bars, Grills &amp; Lounges</field>
+    <field name="category">Bars &amp; Lounges</field>
+    <field name="place_type">restaurant</field>
+    <field name="id">8043a7cd0245eb59112bc35165df31cf</field>
+    <blah>asdf</blah>
+  </doc>
+</add>
