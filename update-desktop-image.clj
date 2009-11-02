@@ -7,6 +7,7 @@
 
 (def ftp-str (str "ftp://anonymous: @ftp.gnome.org" "/Public/GNOME/teams/art.gnome.org/backgrounds/"))
 
+
 (defn potential-images
   "Returns a seq of potential image filenames, all relative paths."
   [url resolution]
@@ -34,7 +35,8 @@
      ; downloading to a tmp file first because overwriting the existing
      ; file causes some problems with gnome
      (with-open [i (.openStream (URL. (select-new-image resolution)))]
-       (streams/copy i (File. tmp-image-name)))
+       (binding [streams/*buffer-size* 4096]
+         (streams/copy i (File. tmp-image-name))))
      (sout/sh "mv" "-f" tmp-image-name image-name)
      ; updates the background image
      (sout/sh "/usr/bin/gconftool" "-s" 
